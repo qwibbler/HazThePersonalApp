@@ -2,11 +2,20 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.Button
+import androidx.compose.material.Icon
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.Card
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.TimePicker
@@ -61,24 +70,39 @@ fun sightingPicker() {
         dateTime += chosenTime
     }
 
+    fun confirm() {
+    }
+
     fun back() {
         showSightingPicker = showSightingPicker.previous()
     }
 
     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         Button(onClick = { showSightingPicker = showSightingPicker.showHide() }) {
+            Icon(Icons.Default.Add, "Add Sighting")
             Text("Add Sighting")
         }
         Text(showSightingPicker.toString())
         Text(dateTime.toString())
-        AnimatedVisibility(showSightingPicker == AddSighting.BRIEF) {
-            SightingBriefPicker(::addBrief, ::back)
-        }
-        AnimatedVisibility(showSightingPicker == AddSighting.CALENDAR) {
-            SightingDatePicker(::addDate, ::back)
-        }
-        AnimatedVisibility(showSightingPicker == AddSighting.TIMER) {
-            SightingTimePicker(::addTime, ::back)
+
+        AnimatedVisibility(
+            showSightingPicker != AddSighting.NONE,
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Card(modifier = Modifier.fillMaxHeight().fillMaxWidth()) {
+                AnimatedVisibility(showSightingPicker == AddSighting.BRIEF) {
+                    SightingBriefPicker(::addBrief, ::back)
+                }
+                AnimatedVisibility(showSightingPicker == AddSighting.CALENDAR) {
+                    SightingDatePicker(::addDate, ::back)
+                }
+                AnimatedVisibility(showSightingPicker == AddSighting.TIMER) {
+                    SightingTimePicker(::addTime, ::back)
+                }
+                AnimatedVisibility(showSightingPicker == AddSighting.CONFIRM) {
+                    Text("Confirm: $dateTime")
+                }
+            }
         }
     }
 }
@@ -88,47 +112,61 @@ fun sightingPicker() {
 fun SightingBriefPicker(next: (chosenDate: Instant?) -> Unit, previous: () -> Unit) {
     val sightings = BriefSightings()
     Column(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.fillMaxHeight(),
         horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.SpaceBetween
     ) {
-        Button(modifier = Modifier.fillMaxWidth(), onClick = { next(sightings.now) }) {
-            Text("Now")
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Button(modifier = Modifier.fillMaxWidth(), onClick = { next(sightings.now) }) {
+                Text("Now")
+            }
+            Button(
+                modifier = Modifier.fillMaxWidth(),
+                onClick = { next(sightings.fiveMinutesAgo) }) {
+                Text("Five Minutes Ago")
+            }
+            Button(
+                modifier = Modifier.fillMaxWidth(),
+                onClick = { next(sightings.tenMinutesAgo) }) {
+                Text("Ten Minutes Ago")
+            }
+            Button(modifier = Modifier.fillMaxWidth(),
+                onClick = { next(sightings.fifteenMinutesAgo) }) {
+                Text("Fifteen Minutes Ago")
+            }
+            Button(modifier = Modifier.fillMaxWidth(), onClick = { next(null) }) {
+                Text("Pick Custom Time")
+            }
         }
-        Button(modifier = Modifier.fillMaxWidth(), onClick = { next(sightings.fiveMinutesAgo) }) {
-            Text("Five Minutes Ago")
-        }
-        Button(modifier = Modifier.fillMaxWidth(), onClick = { next(sightings.tenMinutesAgo) }) {
-            Text("Ten Minutes Ago")
-        }
-        Button(
-            modifier = Modifier.fillMaxWidth(),
-            onClick = { next(sightings.fifteenMinutesAgo) }) {
-            Text("Fifteen Minutes Ago")
-        }
-        Button(modifier = Modifier.fillMaxWidth(), onClick = { next(null) }) {
-            Text("Pick Custom Time")
-        }
-        Button(onClick = { previous() }) {
+        Button(modifier = Modifier.padding(16.dp), onClick = { previous() }) {
+            Icon(Icons.Default.Close, "Cancel")
             Text("Cancel")
         }
-
     }
 }
 
 @ExperimentalMaterial3Api
 @Composable
 fun SightingDatePicker(next: (chosenDate: Long) -> Unit, previous: () -> Unit) {
+    val datePickerState = rememberDatePickerState(
+        initialSelectedDateMillis = Clock.System.now().toEpochMilliseconds()
+    )
     Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+        modifier = Modifier.fillMaxHeight(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.SpaceBetween
     ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
 //        TODO: Some bakwas with timezones?
-        val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = Clock.System.now().toEpochMilliseconds()
-        )
-        DatePicker(state = datePickerState, modifier = Modifier.padding(16.dp))
+            DatePicker(state = datePickerState, modifier = Modifier.fillMaxWidth())
+        }
         val datePicked = datePickerState.selectedDateMillis!!
         ButtonRow(next = { next(datePicked) }, previous = previous)
     }
@@ -142,11 +180,17 @@ fun SightingTimePicker(next: (chosenTime: Duration) -> Unit, previous: () -> Uni
         initialHour = dateTime.hour, initialMinute = dateTime.minute, is24Hour = false
     )
     Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+        modifier = Modifier.fillMaxHeight(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.SpaceBetween
     ) {
-        TimePicker(state = timePickerState, modifier = Modifier.padding(16.dp))
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            TimePicker(state = timePickerState, modifier = Modifier.padding(16.dp))
+        }
         val timePicked = timePickerState.hour.hours + timePickerState.minute.minutes
         ButtonRow(next = { next(timePicked) }, previous = previous)
     }
@@ -155,15 +199,17 @@ fun SightingTimePicker(next: (chosenTime: Duration) -> Unit, previous: () -> Uni
 @Composable
 fun ButtonRow(next: () -> Unit, previous: () -> Unit) {
     Row(
-        horizontalArrangement = Arrangement.End,
+        horizontalArrangement = Arrangement.Center,
         modifier = Modifier.fillMaxWidth().padding(16.dp)
     ) {
-        Button(modifier = Modifier.padding(16.dp), onClick = { previous() }) {
+        Button(modifier = Modifier.padding(8.dp), onClick = { previous() }) {
+            Icon(Icons.Default.ArrowBack, "Back")
             Text("Back")
         }
-        Button(modifier = Modifier.padding(16.dp), onClick = {
+        Button(modifier = Modifier.padding(8.dp), onClick = {
             next()
         }) {
+            Icon(Icons.Default.ArrowForward, "Next")
             Text("Next")
         }
     }

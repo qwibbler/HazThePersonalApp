@@ -2,20 +2,15 @@ import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import kotlin.time.Duration.Companion.minutes
 
-data class ShowAddSighting(
-    val showBrief: Boolean = false,
-    val showCalendar: Boolean = false,
-    val showTimer: Boolean = false,
-)
-
 enum class AddSighting {
-    NONE, BRIEF, CALENDAR, TIMER;
+    NONE, BRIEF, CALENDAR, TIMER, CONFIRM;
     fun next(): AddSighting {
         return when (this) {
             NONE -> BRIEF
             BRIEF -> CALENDAR
             CALENDAR -> TIMER
-            TIMER -> NONE
+            TIMER -> CONFIRM
+            CONFIRM -> NONE
         }
     }
 
@@ -25,6 +20,7 @@ enum class AddSighting {
             BRIEF -> NONE
             CALENDAR -> BRIEF
             TIMER -> CALENDAR
+            CONFIRM -> TIMER
         }
     }
 
